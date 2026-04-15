@@ -10,7 +10,7 @@ def run_command(cmd, description):
     """Run a command and print output"""
     print(f"\n[INFO] {description}...")
     try:
-        result = subprocess.run(cmd, shell=True, cwd="/vercel/share/v0-project", 
+        result = subprocess.run(cmd, shell=True, 
                               capture_output=True, text=True)
         if result.returncode == 0:
             print(f"[SUCCESS] {description}")
@@ -22,7 +22,9 @@ def run_command(cmd, description):
         print(f"[ERROR] {description} - {str(e)}")
 
 def main():
-    os.chdir("/vercel/share/v0-project")
+    # Get current working directory
+    cwd = os.getcwd()
+    print(f"[INFO] Working directory: {cwd}")
     
     print("=" * 60)
     print("PHASE 1 GIT COMMIT: Database Schema & Official Form 1 Topics")
