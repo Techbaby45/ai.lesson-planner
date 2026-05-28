@@ -9,12 +9,9 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-100">
       <div className="bg-blue-900 text-white py-4 px-6 shadow-md">
-        <h1 className="text-xl font-bold text-center">
-          AI-Powered Lesson Planner
-        </h1>
-        <p className="text-blue-200 text-sm text-center">
-          Zambian Secondary School Mathematics — ECZ Syllabus Aligned
-        </p>
+       <h1 className="text-xl font-bold text-center tracking-widest uppercase">
+  LESSON PLANNER
+</h1>
       </div>
 
       <div className="max-w-5xl mx-auto p-6">
