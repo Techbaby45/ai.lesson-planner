@@ -2,6 +2,19 @@
 import { useState } from "react"
 import TopicSelector from "./TopicSelector"
 
+const Field = ({ label, name, value, onChange, type = "text", placeholder = "" }) => (
+  <div>
+    <label className="block text-sm font-semibold text-blue-900 mb-1">{label}</label>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  </div>
+)
 export default function LessonForm({ onPlanGenerated }) {
   const [selectedTopic, setSelectedTopic] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -32,6 +45,11 @@ export default function LessonForm({ onPlanGenerated }) {
     setError("")
     setLoading(true)
     try {
+      if (!navigator.onLine) {
+  setError("You are offline. Please connect to the internet to generate a lesson plan. You can still browse topics and view saved plans.")
+  setLoading(false)
+  return
+}
       const response = await fetch("http://127.0.0.1:8000/generate-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,19 +69,6 @@ export default function LessonForm({ onPlanGenerated }) {
     }
   }
 
-  const Field = ({ label, name, type = "text", placeholder = "" }) => (
-    <div>
-      <label className="block text-sm font-semibold text-blue-900 mb-1">{label}</label>
-      <input
-        type={type}
-        name={name}
-        value={form[name]}
-        onChange={handleChange}
-        placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    </div>
-  )
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-6">
@@ -75,12 +80,12 @@ export default function LessonForm({ onPlanGenerated }) {
       <div>
         <h2 className="text-lg font-bold text-blue-900 mb-4">Step 2: Describe Your Classroom</h2>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Name of Teacher" name="name_of_teacher" placeholder="e.g. Mrs Banda" />
-          <Field label="Class" name="class_" placeholder="e.g. 1A" />
-          <Field label="Time" name="time_" placeholder="e.g. 07:30" />
-          <Field label="Date" name="date_" type="date" />
-          <Field label="Duration (minutes)" name="duration" placeholder="e.g. 70" />
-          <Field label="Number of Learners" name="no_of_learners" type="number" placeholder="e.g. 45" />
+         <Field label="Name of Teacher" name="name_of_teacher" value={form.name_of_teacher} onChange={handleChange} placeholder="e.g. Mrs Banda" />
+<Field label="Class" name="class_" value={form.class_} onChange={handleChange} placeholder="e.g. 1A" />
+<Field label="Time" name="time_" value={form.time_} onChange={handleChange} placeholder="e.g. 07:30" />
+<Field label="Date" name="date_" value={form.date_} onChange={handleChange} type="date" />
+<Field label="Duration (minutes)" name="duration" value={form.duration} onChange={handleChange} placeholder="e.g. 70" />
+<Field label="Number of Learners" name="no_of_learners" value={form.no_of_learners} onChange={handleChange} type="number" placeholder="e.g. 45" />
         </div>
 
         <div className="mt-4 space-y-3">

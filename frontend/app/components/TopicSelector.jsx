@@ -1,23 +1,35 @@
 "use client"
 import { useEffect, useState } from "react"
+import { saveTopicsOffline, loadTopicsOffline } from "../utils/offlineStore"
 
 export default function TopicSelector({ onTopicSelect }) {
   const [topics, setTopics] = useState([])
   const [loading, setLoading] = useState(true)
+  const [offline, setOffline] = useState(false)
   const [selectedTerm, setSelectedTerm] = useState("")
   const [selectedTopic, setSelectedTopic] = useState(null)
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/topics")
-      .then(res => res.json())
-      .then(data => {
+    async function loadTopics() {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/topics")
+        if (!res.ok) throw new Error("Server error")
+        const data = await res.json()
         setTopics(data.topics)
+        setOffline(false)
+        await saveTopicsOffline(data.topics)
+      } catch (err) {
+        console.log("Backend unavailable, loading offline topics...")
+        const offlineTopics = await loadTopicsOffline()
+        if (offlineTopics.length > 0) {
+          setTopics(offlineTopics)
+          setOffline(true)
+        }
+      } finally {
         setLoading(false)
-      })
-      .catch(err => {
-        console.error("Failed to load topics:", err)
-        setLoading(false)
-      })
+      }
+    }
+    loadTopics()
   }, [])
 
   const terms = [...new Set(topics.map(t => t.term_name))].sort()
@@ -31,10 +43,26 @@ export default function TopicSelector({ onTopicSelect }) {
     if (topic) onTopicSelect(topic)
   }
 
-  if (loading) return <p className="text-gray-500">Loading topics...</p>
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-gray-500 py-2">
+        <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+        <p className="text-sm">Loading topics...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
+      {offline && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 flex items-center gap-2">
+          <span className="text-yellow-600 text-sm">⚠️</span>
+          <p className="text-yellow-700 text-xs">
+            You are offline. Showing saved syllabus data. Plan generation requires internet.
+          </p>
+        </div>
+      )}
+
       <div>
         <label className="block text-sm font-semibold text-blue-900 mb-1">
           Select Term
@@ -72,10 +100,16 @@ export default function TopicSelector({ onTopicSelect }) {
       )}
 
       {selectedTopic && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-2">
-          <p className="text-xs font-semibold text-blue-800 mb-1">Auto-populated from ECZ Syllabus:</p>
-          <p className="text-xs text-blue-700"><span className="font-semibold">Lesson Goal:</span> {selectedTopic.lesson_goal}</p>
-          <p className="text-xs text-blue-700 mt-1"><span className="font-semibold">Prior Knowledge:</span> {selectedTopic.prior_knowledge}</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-xs font-bold text-blue-800 mb-2">
+            Auto-populated from ECZ Syllabus:
+          </p>
+          <p className="text-xs text-blue-700">
+            <span className="font-semibold">Lesson Goal:</span> {selectedTopic.lesson_goal}
+          </p>
+          <p className="text-xs text-blue-700 mt-1">
+            <span className="font-semibold">Prior Knowledge:</span> {selectedTopic.prior_knowledge}
+          </p>
         </div>
       )}
     </div>

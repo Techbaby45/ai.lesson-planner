@@ -4,12 +4,12 @@ from pydantic import BaseModel
 import sqlite3
 import os
 import json
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 from prompt_builder import build_lesson_plan_prompt
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 app = FastAPI(title="AI Lesson Planner API")
 
@@ -26,7 +26,6 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Input model — matches exactly what the teacher fills on Page 1
 class LessonRequest(BaseModel):
     topic_id: int
     name_of_teacher: str
@@ -71,7 +70,6 @@ def get_topic(topic_id: int):
 
 @app.post("/generate-plan")
 def generate_plan(request: LessonRequest):
-    # Step 1: Get topic from database
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM topic WHERE topic_id = ?", (request.topic_id,))
@@ -83,7 +81,6 @@ def generate_plan(request: LessonRequest):
 
     topic_data = dict(topic)
 
-    # Step 2: Build the prompt
     teacher_input = {
         "name_of_teacher": request.name_of_teacher,
         "class_": request.class_,
@@ -99,13 +96,14 @@ def generate_plan(request: LessonRequest):
 
     prompt = build_lesson_plan_prompt(topic_data, teacher_input)
 
-    # Step 3: Call Gemini API
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(prompt)
-        raw_text = response.text.strip()
+        response = client.chat.completions.create(
+           model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+        raw_text = response.choices[0].message.content.strip()
 
-        # Clean the response (remove markdown code blocks if present)
         if raw_text.startswith("```"):
             raw_text = raw_text.split("```")[1]
             if raw_text.startswith("json"):
@@ -120,7 +118,6 @@ def generate_plan(request: LessonRequest):
             detail=f"AI generation failed: {str(e)}"
         )
 
-    # Step 4: Save teacher input to database
     cursor.execute("""
         INSERT INTO teacher_input (
             topic_id, name_of_teacher, class_, time_, date_,
@@ -138,7 +135,6 @@ def generate_plan(request: LessonRequest):
     ))
     input_id = cursor.lastrowid
 
-    # Step 5: Save lesson plan to database
     cursor.execute("""
         INSERT INTO lesson_plan (
             input_id, intro_teacher, intro_learners, intro_assessment,
@@ -171,7 +167,6 @@ def generate_plan(request: LessonRequest):
     conn.commit()
     conn.close()
 
-    # Step 6: Return everything the frontend needs
     return {
         "success": True,
         "input_id": input_id,

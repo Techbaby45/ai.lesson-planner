@@ -83,7 +83,7 @@ export default function LessonPlanDisplay({ data, onBack }) {
           <textarea
             value={planFields[teacherKey]}
             onChange={e => updatePlan(teacherKey, e.target.value)}
-            rows={5}
+            rows={8}
             className="w-full text-xs text-gray-900 border-0 focus:outline-none resize-y bg-transparent"
           />
         </div>
@@ -232,7 +232,7 @@ export default function LessonPlanDisplay({ data, onBack }) {
         <textarea
           value={planFields.lesson_evaluation}
           onChange={e => updatePlan("lesson_evaluation", e.target.value)}
-          rows={6}
+          rows={10}
           className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-y"
         />
         <div className="mt-3 space-y-3">
