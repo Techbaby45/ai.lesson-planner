@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 import sqlite3
 import os
@@ -7,6 +8,7 @@ import json
 from groq import Groq
 from dotenv import load_dotenv
 from prompt_builder import build_lesson_plan_prompt
+from auth import hash_password, verify_password, create_token, get_current_user
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -39,9 +41,66 @@ class LessonRequest(BaseModel):
     technological_environment: str
     teaching_materials: str
 
+class RegisterRequest(BaseModel):
+    name: str
+    department: str
+    password: str
+
+class LoginRequest(BaseModel):
+    name: str
+    password: str
+
 @app.get("/")
 def root():
     return {"message": "AI Lesson Planner API is running"}
+
+@app.post("/register")
+def register(request: RegisterRequest):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM user WHERE name = ?", (request.name,))
+    existing = cursor.fetchone()
+    if existing:
+        conn.close()
+        raise HTTPException(status_code=400, detail="A user with this name already exists")
+    password_hash = hash_password(request.password)
+    cursor.execute("""
+        INSERT INTO user (name, department, password_hash)
+        VALUES (?, ?, ?)
+    """, (request.name, request.department, password_hash))
+    user_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    token = create_token(user_id, request.name)
+    return {
+        "success": True,
+        "token": token,
+        "user": {"user_id": user_id, "name": request.name, "department": request.department}
+    }
+
+@app.post("/login")
+def login(request: LoginRequest):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM user WHERE name = ?", (request.name,))
+    user = cursor.fetchone()
+    conn.close()
+    if not user or not verify_password(request.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Incorrect name or password")
+    token = create_token(user["user_id"], user["name"])
+    return {
+        "success": True,
+        "token": token,
+        "user": {
+            "user_id": user["user_id"],
+            "name": user["name"],
+            "department": user["department"]
+        }
+    }
+
+@app.get("/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return current_user
 
 @app.get("/topics")
 def get_topics():
@@ -98,7 +157,7 @@ def generate_plan(request: LessonRequest):
 
     try:
         response = client.chat.completions.create(
-           model="llama-3.3-70b-versatile",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
         )

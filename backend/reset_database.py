@@ -4,6 +4,13 @@ conn = sqlite3.connect("lesson_planner.db")
 cursor = conn.cursor()
 
 # Drop old tables if they exist
+# Drop old tables if they exist
+cursor.execute("DROP TABLE IF EXISTS lesson_plan")
+cursor.execute("DROP TABLE IF EXISTS teacher_input")
+cursor.execute("DROP TABLE IF EXISTS topic")
+cursor.execute("DROP TABLE IF EXISTS term_module")
+cursor.execute("DROP TABLE IF EXISTS syllabus")
+cursor.execute("DROP TABLE IF EXISTS user")
 cursor.execute("DROP TABLE IF EXISTS topics")
 cursor.execute("DROP TABLE IF EXISTS lesson_plans")
 cursor.execute("DROP TABLE IF EXISTS teacher_inputs")
@@ -53,11 +60,11 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS user (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    school TEXT,
-    preferences TEXT
+    department TEXT,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 """)
-
 # Create teacher_input table with all real Page 1 fields
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS teacher_input (
