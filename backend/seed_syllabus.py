@@ -3,113 +3,166 @@ import sqlite3
 conn = sqlite3.connect("lesson_planner.db")
 cursor = conn.cursor()
 
-# Insert the Mathematics I syllabus
+# Insert Mathematics I Syllabus
 cursor.execute("""
-INSERT INTO syllabus (subject, grade, version, year)
-VALUES ('Mathematics I', 'Form 1', 'ECZ 2013', '2025/2026')
-""")
+    INSERT INTO syllabus (subject, grade, version, year)
+    VALUES (?, ?, ?, ?)
+""", ("Mathematics I", "Form 1", "Competence-Based Curriculum", "2023"))
 syllabus_id = cursor.lastrowid
 
-# Insert Term 1 module
+# Insert Term 1 Module
 cursor.execute("""
-INSERT INTO term_module (syllabus_id, term_number, term_name)
-VALUES (?, 1, 'Term 1')
-""", (syllabus_id,))
+    INSERT INTO term_module (syllabus_id, term_number, term_name)
+    VALUES (?, ?, ?)
+""", (syllabus_id, 1, "Term 1"))
 term1_id = cursor.lastrowid
 
-# Insert Term 2 module
+# ─────────────────────────────────────────────
+# TOPIC 1: NUMBERS — SUBTOPIC 1
+# ─────────────────────────────────────────────
 cursor.execute("""
-INSERT INTO term_module (syllabus_id, term_number, term_name)
-VALUES (?, 2, 'Term 2')
-""", (syllabus_id,))
-term2_id = cursor.lastrowid
-
-# Insert Term 3 module
-cursor.execute("""
-INSERT INTO term_module (syllabus_id, term_number, term_name)
-VALUES (?, 3, 'Term 3')
-""", (syllabus_id,))
-term3_id = cursor.lastrowid
-
-# Insert placeholder topics for Term 1
-# NOTE: Replace these with real data from your actual syllabus when you get it
-term1_topics = [
-    {
-        "topic_name": "Sets",
-        "sub_topic": "Introduction to Sets and Set Notation",
-        "general_competences": "Critical thinking, Collaboration, Creativity and Innovation, Communication",
-        "specific_competences": "1. Define a set using curly braces notation. 2. List and identify elements of a given set. 3. Use set notation correctly in mathematical expressions.",
-        "lesson_goal": "By the end of the lesson learners should be able to define sets and use set notation correctly.",
-        "rationale": "Sets provide the foundation for understanding mathematical relationships and are used across all areas of mathematics.",
-        "prior_knowledge": "Learners can identify and group objects by common properties from primary school mathematics.",
-        "references_": "Mathematics Pupils Book 1, CDC Zambia. Mathematics Teachers Guide Form 1, ECZ.",
-        "expected_standard": "Learners can correctly define a set, list its elements using curly braces, and identify whether an object belongs to a given set."
-    },
-    {
-        "topic_name": "Sets",
-        "sub_topic": "Types of Sets",
-        "general_competences": "Critical thinking, Collaboration, Creativity and Innovation, Communication",
-        "specific_competences": "1. Identify and distinguish between finite and infinite sets. 2. Define and give examples of empty sets and universal sets. 3. Identify subsets and equal sets.",
-        "lesson_goal": "By the end of the lesson learners should be able to identify and classify different types of sets.",
-        "rationale": "Understanding types of sets develops classification skills and logical thinking essential for advanced mathematics.",
-        "prior_knowledge": "Learners can define a set and list its elements using set notation.",
-        "references_": "Mathematics Pupils Book 1, CDC Zambia. Mathematics Teachers Guide Form 1, ECZ.",
-        "expected_standard": "Learners can correctly identify finite, infinite, empty, universal, and equal sets with examples."
-    },
-    {
-        "topic_name": "Real Numbers",
-        "sub_topic": "Number Classification",
-        "general_competences": "Critical thinking, Collaboration, Creativity and Innovation, Communication",
-        "specific_competences": "1. Classify numbers as natural, whole, integers, rational and irrational. 2. Place numbers correctly on the real number line. 3. Compare and order real numbers.",
-        "lesson_goal": "By the end of the lesson learners should be able to classify and order real numbers on the number line.",
-        "rationale": "Understanding number classification builds the foundation for all arithmetic and algebraic operations in secondary school mathematics.",
-        "prior_knowledge": "Learners can count, read, and write whole numbers and simple fractions from primary school.",
-        "references_": "Mathematics Pupils Book 1, CDC Zambia. Mathematics Teachers Guide Form 1, ECZ.",
-        "expected_standard": "Learners can correctly classify any given number and place it on the number line."
-    },
-    {
-        "topic_name": "Fractions",
-        "sub_topic": "Operations with Fractions",
-        "general_competences": "Critical thinking, Collaboration, Creativity and Innovation, Communication",
-        "specific_competences": "1. Add and subtract fractions with like and unlike denominators. 2. Multiply and divide fractions. 3. Convert between improper fractions and mixed numbers.",
-        "lesson_goal": "By the end of the lesson learners should be able to perform all four operations with fractions.",
-        "rationale": "Fractions are used in everyday life including cooking, measurements, and sharing. Mastery of fraction operations is essential for algebra.",
-        "prior_knowledge": "Learners can identify numerator and denominator and understand the concept of equal parts from primary school.",
-        "references_": "Mathematics Pupils Book 1, CDC Zambia. Mathematics Teachers Guide Form 1, ECZ.",
-        "expected_standard": "Learners can correctly add, subtract, multiply and divide fractions including mixed numbers."
-    },
-    {
-        "topic_name": "Ratios and Proportions",
-        "sub_topic": "Expressing and Applying Ratios",
-        "general_competences": "Critical thinking, Collaboration, Creativity and Innovation, Communication",
-        "specific_competences": "1. Express ratios in their simplest form. 2. Divide quantities in given ratios. 3. Solve real-life problems involving direct proportion.",
-        "lesson_goal": "By the end of the lesson learners should be able to express ratios in simplest form and solve proportion problems.",
-        "rationale": "Ratios and proportions are used in real life contexts such as mixing, sharing, maps and scale drawings relevant to Zambian learners.",
-        "prior_knowledge": "Learners understand fractions and can simplify fractions using HCF.",
-        "references_": "Mathematics Pupils Book 1, CDC Zambia. Mathematics Teachers Guide Form 1, ECZ.",
-        "expected_standard": "Learners can simplify ratios and solve direct proportion problems in real-life contexts."
-    },
-]
-
-for topic in term1_topics:
-    cursor.execute("""
     INSERT INTO topic (
         module_id, topic_name, sub_topic,
         general_competences, specific_competences,
         lesson_goal, rationale, prior_knowledge,
         references_, expected_standard
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        term1_id,
-        topic["topic_name"], topic["sub_topic"],
-        topic["general_competences"], topic["specific_competences"],
-        topic["lesson_goal"], topic["rationale"], topic["prior_knowledge"],
-        topic["references_"], topic["expected_standard"]
-    ))
+""", (
+    term1_id,
+    "Numbers",
+    "Classification of Numbers",
+    "Analytical Thinking, Communication, Problem Solving, Collaboration, Financial Literacy, Digital Literacy, Creativity",
+    "Apply classification of numbers in real life situations",
+    "Learners will be able to classify numbers into natural numbers, whole numbers, integers, rational numbers, irrational numbers, prime numbers, composite numbers, even and odd numbers, and find factors, multiples, HCF and LCM and apply these in real life situations",
+    "Understanding number classification is a fundamental concept in mathematics that helps learners understand different types of numbers and their properties. Finding factors, multiples, HCF and LCM enables learners to solve real life problems such as organising resources, scheduling and planning",
+    "Learners have prior knowledge of counting numbers, basic arithmetic operations (addition, subtraction, multiplication, division), and simple number patterns from primary school",
+    "Ministry of Education (2023) Mathematics I Syllabus Form 1-4. Curriculum Development Centre, Lusaka. Ministry of Education (2025) Mathematics I Teaching Module Form 1 Term 1. Curriculum Development Centre, Lusaka",
+    "Numbers applied in real life situations consistently"
+))
+
+# ─────────────────────────────────────────────
+# TOPIC 1: NUMBERS — SUBTOPIC 2
+# ─────────────────────────────────────────────
+cursor.execute("""
+    INSERT INTO topic (
+        module_id, topic_name, sub_topic,
+        general_competences, specific_competences,
+        lesson_goal, rationale, prior_knowledge,
+        references_, expected_standard
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    term1_id,
+    "Numbers",
+    "Combined Operations on Real Numbers",
+    "Analytical Thinking, Communication, Problem Solving, Collaboration, Financial Literacy, Digital Literacy, Creativity",
+    "Apply combined operations on real numbers in real life situations",
+    "Learners will be able to correctly apply the order of operations (PEDMAS — Parentheses, Exponents, Division, Multiplication, Addition, Subtraction) to solve combined operations on real numbers in real life situations such as budgeting and calculating costs in Kwacha",
+    "Understanding combined operations is crucial for solving real world problems including budgeting, calculating costs at the market, and making informed financial decisions. The correct order of operations ensures consistent and accurate results in mathematical calculations",
+    "Learners have prior knowledge of basic arithmetic operations (addition, subtraction, multiplication, division) on whole numbers and simple fractions from primary school mathematics",
+    "Ministry of Education (2023) Mathematics I Syllabus Form 1-4. Curriculum Development Centre, Lusaka. Ministry of Education (2025) Mathematics I Teaching Module Form 1 Term 1. Curriculum Development Centre, Lusaka",
+    "Combined operations on real numbers applied in everyday life situations correctly"
+))
+
+# ─────────────────────────────────────────────
+# TOPIC 2: INTEGERS
+# ─────────────────────────────────────────────
+cursor.execute("""
+    INSERT INTO topic (
+        module_id, topic_name, sub_topic,
+        general_competences, specific_competences,
+        lesson_goal, rationale, prior_knowledge,
+        references_, expected_standard
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    term1_id,
+    "Integers",
+    "The Four Operations on Integers",
+    "Critical Thinking, Analytical Thinking, Creativity and Innovation, Problem Solving, Digital Literacy, Collaboration, Communication",
+    "Use integers in real life situations",
+    "Learners will be able to perform the four basic operations (addition, subtraction, multiplication and division) on integers and apply them to real life situations such as calculating temperature changes, managing mobile money account balances, tracking profit and loss, and measuring altitude above and below sea level",
+    "Integers are the building blocks of mathematics. Mastering integer operations is key to understanding essential mathematical concepts and lays the groundwork for tackling more complex topics. Integer operations apply directly to real world situations in Zambia such as calculating profit and loss at a market stall, mobile money transactions on ZANACO or MTN, and temperature changes between seasons",
+    "Learners have prior knowledge of natural numbers, whole numbers, basic arithmetic operations, and the concept of negative numbers as introduced in the classification of numbers subtopic",
+    "Ministry of Education (2023) Mathematics I Syllabus Form 1-4. Curriculum Development Centre, Lusaka. Ministry of Education (2025) Mathematics I Teaching Module Form 1 Term 1. Curriculum Development Centre, Lusaka",
+    "Integers used in real life correctly"
+))
+
+# ─────────────────────────────────────────────
+# TOPIC 3: APPROXIMATIONS AND ESTIMATIONS — SUBTOPIC 1
+# ─────────────────────────────────────────────
+cursor.execute("""
+    INSERT INTO topic (
+        module_id, topic_name, sub_topic,
+        general_competences, specific_competences,
+        lesson_goal, rationale, prior_knowledge,
+        references_, expected_standard
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    term1_id,
+    "Approximations and Estimations",
+    "Approximations",
+    "Problem Solving, Analytical Thinking, Collaboration, Communication, Digital Literacy, Financial Literacy",
+    "Use approximation to make informed decisions in real life",
+    "Learners will be able to round off numbers to a required degree of accuracy including decimal places and significant figures, express very large and very small numbers in scientific notation, and use approximations to simplify calculations and make informed decisions in real life contexts such as construction, medicine and finance",
+    "Approximations and significant figures are critical skills used in everyday life to simplify complex measurements and ensure precision. Scientific notation is essential for expressing very large and very small numbers used in science, technology and commerce. These skills support informed decision making in areas such as construction, medicine, finance and engineering in Zambia",
+    "Learners have prior knowledge of place value, rounding of whole numbers and decimals to the nearest ten, hundred or decimal place, and basic operations on real numbers",
+    "Ministry of Education (2023) Mathematics I Syllabus Form 1-4. Curriculum Development Centre, Lusaka. Ministry of Education (2025) Mathematics I Teaching Module Form 1 Term 1. Curriculum Development Centre, Lusaka",
+    "Approximations used to make informed decisions in real life appropriately"
+))
+
+# ─────────────────────────────────────────────
+# TOPIC 3: APPROXIMATIONS AND ESTIMATIONS — SUBTOPIC 2
+# ─────────────────────────────────────────────
+cursor.execute("""
+    INSERT INTO topic (
+        module_id, topic_name, sub_topic,
+        general_competences, specific_competences,
+        lesson_goal, rationale, prior_knowledge,
+        references_, expected_standard
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    term1_id,
+    "Approximations and Estimations",
+    "Estimations",
+    "Problem Solving, Analytical Thinking, Collaboration, Communication, Digital Literacy, Financial Literacy",
+    "Use estimation to make informed decisions in real life",
+    "Learners will be able to estimate measures and compare them with actual measurements, calculate absolute error, relative error, percentage error and tolerance, and use these to evaluate the accuracy of measurements and make informed decisions in real life situations such as buying mealie meal, building construction and medical dosage",
+    "Estimations are essential in simplifying complex problems and making quick decisions. Understanding absolute error, relative error, percentage error and tolerance is vital in fields such as engineering, manufacturing, science and commerce in Zambia where precise measurements and acceptable limits of variation are critical",
+    "Learners have prior knowledge of rounding of numbers, significant figures, scientific notation, basic arithmetic operations, fractions, decimals and percentages",
+    "Ministry of Education (2023) Mathematics I Syllabus Form 1-4. Curriculum Development Centre, Lusaka. Ministry of Education (2025) Mathematics I Teaching Module Form 1 Term 1. Curriculum Development Centre, Lusaka",
+    "Estimations used to make informed decisions in real life correctly"
+))
+
+# ─────────────────────────────────────────────
+# TOPIC 4: SETS
+# ─────────────────────────────────────────────
+cursor.execute("""
+    INSERT INTO topic (
+        module_id, topic_name, sub_topic,
+        general_competences, specific_competences,
+        lesson_goal, rationale, prior_knowledge,
+        references_, expected_standard
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+""", (
+    term1_id,
+    "Sets",
+    "Operations on Sets",
+    "Communication, Creativity, Innovation, Collaboration, Critical Thinking, Digital Literacy, Problem Solving",
+    "Apply set operations in real life context",
+    "Learners will be able to create and represent sets using listing (roster form), set builder notation, number line and Venn diagrams, and perform and interpret set operations including union, intersection, complement and set difference on up to three sets in real life contexts such as survey analysis, library cataloguing and event planning",
+    "Knowledge of sets is of great importance in developing a sense of order, organisation and logical thinking. Set operations are widely applied in everyday life in Zambia including organising groups of learners, analysing survey results, managing school timetables and categorising information. Venn diagrams provide a powerful visual tool for representing and solving real life problems",
+    "Learners have prior knowledge of classification and grouping of objects, basic number properties, listing of numbers in sequences or groups, and simple logical thinking from primary school and earlier Form 1 topics",
+    "Ministry of Education (2023) Mathematics I Syllabus Form 1-4. Curriculum Development Centre, Lusaka. Ministry of Education (2025) Mathematics I Teaching Module Form 1 Term 1. Curriculum Development Centre, Lusaka",
+    "Set operations as applied in real life context correctly"
+))
 
 conn.commit()
 conn.close()
-print("Syllabus data added successfully!")
-print(f"Syllabus ID: {syllabus_id}")
-print(f"Term 1 Module ID: {term1_id}")
-print(f"Topics added: {len(term1_topics)}")
+print("✅ ECZ Mathematics I Term 1 syllabus seeded successfully!")
+print("")
+print("Topics loaded:")
+print("  1. Numbers — Classification of Numbers")
+print("  2. Numbers — Combined Operations on Real Numbers")
+print("  3. Integers — The Four Operations on Integers")
+print("  4. Approximations and Estimations — Approximations")
+print("  5. Approximations and Estimations — Estimations")
+print("  6. Sets — Operations on Sets")

@@ -1,5 +1,33 @@
 import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
+
+function cleanText(text) {
+  return String(text || "")
+    .replace(/&/g, "and")
+    .replace(/</g, "less than")
+    .replace(/>/g, "greater than")
+    .replace(/\u2019/g, "'")
+    .replace(/\u2018/g, "'")
+    .replace(/\u201C/g, '"')
+    .replace(/\u201D/g, '"')
+    .replace(/\u2013/g, "-")
+    .replace(/\u2014/g, "-")
+    .replace(/\u2022/g, "*")
+    .replace(/\u00D7/g, "x")
+    .replace(/\u00F7/g, "/")
+    .replace(/\u2260/g, "not equal to")
+    .replace(/\u2264/g, "<=")
+    .replace(/\u2265/g, ">=")
+    .replace(/\u2282/g, "subset of")
+    .replace(/\u2283/g, "superset of")
+    .replace(/\u2229/g, "intersection")
+    .replace(/\u222A/g, "union")
+    .replace(/\u2205/g, "empty set")
+    .replace(/\u221A/g, "sqrt")
+    .replace(/\u03C0/g, "pi")
+    .replace(/\u00B2/g, "^2")
+    .replace(/\u00B3/g, "^3")
+    .replace(/[^\x00-\x7F]/g, " ")
+}
 
 export async function exportLessonPlanPDF(topic, teacherFields, planFields) {
   const pdf = new jsPDF("p", "mm", "a4")
@@ -8,16 +36,14 @@ export async function exportLessonPlanPDF(topic, teacherFields, planFields) {
   const margin = 10
   const contentWidth = pageWidth - margin * 2
 
-  // ── COLOURS ──────────────────────────────────────────────────────────────
   const DARK_BLUE = [31, 56, 100]
   const MID_BLUE  = [46, 95, 163]
   const BLACK     = [0, 0, 0]
-  const GRAY      = [100, 100, 100]
   const LIGHT     = [240, 244, 250]
+  const WHITE     = [255, 255, 255]
 
-  let y = margin  // current y position on page
+  let y = margin
 
-  // ── HELPERS ───────────────────────────────────────────────────────────────
   function setFont(size, style = "normal", color = BLACK) {
     pdf.setFontSize(size)
     pdf.setFont("helvetica", style)
@@ -29,262 +55,238 @@ export async function exportLessonPlanPDF(topic, teacherFields, planFields) {
     pdf.rect(x, yPos, w, h, "F")
   }
 
-  function line(yPos) {
+  function drawLine(yPos) {
     pdf.setDrawColor(...MID_BLUE)
     pdf.setLineWidth(0.3)
     pdf.line(margin, yPos, pageWidth - margin, yPos)
   }
 
-  function fieldRow(label, value, x, yPos, w) {
-    setFont(7, "bold", DARK_BLUE)
-    pdf.text(label + ":", x, yPos)
-    setFont(8, "normal", BLACK)
-    const lines = pdf.splitTextToSize(String(value || ""), w - 2)
-    pdf.text(lines, x, yPos + 4)
-    return yPos + 4 + lines.length * 4
-  }
-
-  function labelValue(label, value, yPos, fullWidth = false) {
-    setFont(7, "bold", DARK_BLUE)
-    pdf.text(label + ":", margin, yPos)
-    setFont(8, "normal", BLACK)
-    const maxW = fullWidth ? contentWidth : contentWidth - 2
-    const lines = pdf.splitTextToSize(String(value || ""), maxW)
-    pdf.text(lines, margin, yPos + 4)
-    return yPos + 4 + lines.length * 4.5 + 2
-  }
-
-  function checkPage(needed = 20) {
+  function checkPage(needed = 15) {
     if (y + needed > pageHeight - margin) {
       pdf.addPage()
       y = margin
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // PAGE 1
-  // ══════════════════════════════════════════════════════════════════════════
+  function wrap(text, maxW) {
+    return pdf.splitTextToSize(cleanText(text), maxW)
+  }
 
-  // School header
+  function printLabelValue(label, value, maxW) {
+    checkPage(12)
+    setFont(7, "bold", DARK_BLUE)
+    pdf.text(cleanText(label) + ":", margin, y)
+    y += 4
+    setFont(7.5, "normal", BLACK)
+    const lines = wrap(value, maxW)
+    lines.forEach(line => {
+      checkPage(6)
+      pdf.text(line, margin + 2, y)
+      y += 4.5
+    })
+    y += 2
+  }
+
+  // ─────────────────────────────────────────────
+  // PAGE 1 — Header
+  // ─────────────────────────────────────────────
   drawRect(margin, y, contentWidth, 22, DARK_BLUE)
-  setFont(11, "bold", [255, 255, 255])
-  pdf.text("MATHEMATICS DEPARTMENT", pageWidth / 2, y + 7, { align: "center" })
-  setFont(9, "bold", [255, 255, 255])
-  pdf.text("LESSON PLAN", pageWidth / 2, y + 14, { align: "center" })
+  setFont(11, "bold", WHITE)
+  pdf.text("MATHEMATICS DEPARTMENT", pageWidth / 2, y + 8, { align: "center" })
+  setFont(9, "normal", WHITE)
+  pdf.text("LESSON PLAN", pageWidth / 2, y + 16, { align: "center" })
   y += 26
 
-  // Top 3-column row: Name/Class/Time | Date/Duration/Learners
-  const col = contentWidth / 2
-  setFont(7, "bold", DARK_BLUE)
-  drawRect(margin, y, contentWidth, 4, LIGHT)
-  y += 5
-
-  // Left column
+  const halfW  = contentWidth / 2 - 2
   const leftX  = margin + 1
-  const rightX = margin + col + 2
+  const rightX = margin + contentWidth / 2 + 3
 
+  const infoRows = [
+    ["NAME OF TEACHER", teacherFields.name_of_teacher, "DATE", teacherFields.date_],
+    ["CLASS", teacherFields.class_, "DURATION", String(teacherFields.duration) + " minutes"],
+    ["TIME", teacherFields.time_, "NO. OF LEARNERS", String(teacherFields.no_of_learners)],
+    ["SUBJECT", "Mathematics I", "TOPIC", topic.topic_name],
+  ]
+
+  infoRows.forEach(([l1, v1, l2, v2]) => {
+    checkPage(8)
+    setFont(7, "bold", DARK_BLUE)
+    pdf.text(l1 + ":", leftX, y)
+    setFont(8, "normal", BLACK)
+    const v1Lines = wrap(v1, halfW - 30)
+    pdf.text(v1Lines, leftX + 32, y)
+
+    setFont(7, "bold", DARK_BLUE)
+    pdf.text(l2 + ":", rightX, y)
+    setFont(8, "normal", BLACK)
+    const v2Lines = wrap(v2, halfW - 26)
+    pdf.text(v2Lines, rightX + 24, y)
+
+    y += Math.max(v1Lines.length, v2Lines.length) * 4.5 + 1
+  })
+
+  checkPage(10)
   setFont(7, "bold", DARK_BLUE)
-  pdf.text("NAME OF TEACHER:", leftX, y)
+  pdf.text("SUB-TOPIC:", leftX, y)
   setFont(8, "normal", BLACK)
-  pdf.text(String(teacherFields.name_of_teacher || ""), leftX + 30, y)
-
-  pdf.text("DATE:", rightX, y, { align: "left"})
-  setFont(8, "normal", BLACK)
-  pdf.text(String(teacherFields.date_ || ""), rightX + 12, y)
-  y += 5
-
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("CLASS:", leftX, y)
-  setFont(8, "normal", BLACK)
-  pdf.text(String(teacherFields.class_ || ""), leftX + 14, y)
-
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("DURATION:", rightX, y)
-  setFont(8, "normal", BLACK)
-  pdf.text(String(teacherFields.duration || "") + " minutes", rightX + 20, y)
-  y += 5
-
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("TIME:", leftX, y)
-  setFont(8, "normal", BLACK)
-  pdf.text(String(teacherFields.time_ || ""), leftX + 12, y)
-
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("NO. OF LEARNERS:", rightX, y)
-  setFont(8, "normal", BLACK)
-  pdf.text(String(teacherFields.no_of_learners || ""), rightX + 34, y)
-  y += 5
-
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("SUBJECT:", leftX, y)
-  setFont(8, "normal", BLACK)
-  pdf.text("Mathematics I", leftX + 18, y)
-  y += 5
-
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("TOPIC:", leftX, y)
-  setFont(8, "normal", BLACK)
-  pdf.text(String(topic.topic_name || ""), leftX + 14, y)
-
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("SUB-TOPIC:", rightX, y)
-  setFont(8, "normal", BLACK)
-  const subLines = pdf.splitTextToSize(String(topic.sub_topic || ""), col - 24)
-  pdf.text(subLines, rightX + 22, y)
+  const subLines = wrap(topic.sub_topic, contentWidth - 26)
+  pdf.text(subLines, leftX + 24, y)
   y += subLines.length * 4.5 + 3
 
-  line(y); y += 4
+  drawLine(y); y += 4
 
-  // General Competences
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("GENERAL COMPETENCES:", margin, y)
-  setFont(7.5, "normal", BLACK)
-  const gcLines = pdf.splitTextToSize(String(topic.general_competences || ""), contentWidth - 48)
-  pdf.text(gcLines, margin + 46, y)
-  y += Math.max(gcLines.length * 4, 5) + 2
+  printLabelValue("GENERAL COMPETENCES", topic.general_competences, contentWidth - 4)
+  printLabelValue("SPECIFIC COMPETENCES", topic.specific_competences, contentWidth - 4)
+  printLabelValue("LESSON GOAL", topic.lesson_goal, contentWidth - 4)
+  printLabelValue("RATIONALE", topic.rationale, contentWidth - 4)
+  printLabelValue("PRIOR KNOWLEDGE", topic.prior_knowledge, contentWidth - 4)
+  printLabelValue("REFERENCES", topic.references_, contentWidth - 4)
 
-  // Specific Competences
-  y = labelValue("SPECIFIC COMPETENCES", topic.specific_competences, y, true)
+  drawLine(y); y += 4
 
-  // Lesson Goal
-  y = labelValue("LESSON GOAL", topic.lesson_goal, y, true)
-
-  // Rationale
-  y = labelValue("RATIONALE", topic.rationale, y, true)
-
-  // Prior Knowledge
-  y = labelValue("PRIOR KNOWLEDGE", topic.prior_knowledge, y, true)
-
-  // References
-  y = labelValue("REFERENCES", topic.references_, y, true)
-
-  line(y); y += 4
-
-  // Learning Environment
+  checkPage(20)
   setFont(7, "bold", DARK_BLUE)
   pdf.text("LEARNING ENVIRONMENT:", margin, y)
   y += 5
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("Natural Environment:", margin + 4, y)
-  setFont(7.5, "normal", BLACK)
-  pdf.text(String(teacherFields.natural_environment || ""), margin + 38, y)
-  y += 5
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("Artificial Environment:", margin + 4, y)
-  setFont(7.5, "normal", BLACK)
-  pdf.text(String(teacherFields.artificial_environment || ""), margin + 40, y)
-  y += 5
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("Technological Environment:", margin + 4, y)
-  setFont(7.5, "normal", BLACK)
-  pdf.text(String(teacherFields.technological_environment || ""), margin + 52, y)
-  y += 6
 
-  // Teaching Materials
-  setFont(7, "bold", DARK_BLUE)
-  pdf.text("TEACHING AND LEARNING MATERIALS / RESOURCES:", margin, y)
-  y += 4
-  setFont(7.5, "normal", BLACK)
-  const matLines = pdf.splitTextToSize(String(teacherFields.teaching_materials || ""), contentWidth - 4)
-  matLines.forEach(l => {
-    checkPage()
-    pdf.text("• " + l, margin + 4, y)
-    y += 4.5
+  const envRows = [
+    ["Natural Environment", teacherFields.natural_environment],
+    ["Artificial Environment", teacherFields.artificial_environment],
+    ["Technological Environment", teacherFields.technological_environment],
+  ]
+  envRows.forEach(([label, value]) => {
+    checkPage(8)
+    setFont(7, "bold", DARK_BLUE)
+    pdf.text(cleanText(label) + ":", margin + 4, y)
+    setFont(7.5, "normal", BLACK)
+    const lines = wrap(value, contentWidth - 55)
+    pdf.text(lines, margin + 55, y)
+    y += lines.length * 4.5 + 1
   })
   y += 2
 
-  // Expected Standard
-  y = labelValue("EXPECTED STANDARD", topic.expected_standard, y, true)
+  printLabelValue("TEACHING AND LEARNING MATERIALS / RESOURCES", teacherFields.teaching_materials, contentWidth - 4)
+  printLabelValue("EXPECTED STANDARD", topic.expected_standard, contentWidth - 4)
 
-  // ══════════════════════════════════════════════════════════════════════════
+  // ─────────────────────────────────────────────
   // PAGE 2 — Lesson Progression
-  // ══════════════════════════════════════════════════════════════════════════
+  // ─────────────────────────────────────────────
   pdf.addPage()
   y = margin
 
-  // Page 2 header
   drawRect(margin, y, contentWidth, 10, DARK_BLUE)
-  setFont(9, "bold", [255, 255, 255])
+  setFont(9, "bold", WHITE)
   pdf.text("LESSON PROGRESSION", pageWidth / 2, y + 7, { align: "center" })
   y += 14
 
-  // Column headers
-  const col1W = 35
-  const col2W = (contentWidth - col1W) / 3
-  const col3W = col2W
-  const col4W = contentWidth - col1W - col2W - col3W
+  const stageW    = 30
+  const teacherW  = (contentWidth - stageW) / 3
+  const learnersW = teacherW
+  const assessW   = contentWidth - stageW - teacherW - learnersW
 
-  drawRect(margin, y, contentWidth, 8, MID_BLUE)
-  setFont(7, "bold", [255, 255, 255])
-  pdf.text("STAGES",            margin + 2,             y + 5.5)
-  pdf.text("TEACHER'S",         margin + col1W + col2W/2, y + 4, { align: "center" })
-  pdf.text("ACTIVITIES",        margin + col1W + col2W/2, y + 8, { align: "center" })
-  pdf.text("LEARNERS'",         margin + col1W + col2W + col3W/2, y + 4, { align: "center" })
-  pdf.text("ACTIVITIES",        margin + col1W + col2W + col3W/2, y + 8, { align: "center" })
-  pdf.text("ASSESSMENT",        margin + col1W + col2W + col3W + col4W/2, y + 4, { align: "center" })
-  pdf.text("CRITERIA",          margin + col1W + col2W + col3W + col4W/2, y + 8, { align: "center" })
-  y += 10
+  const stageX    = margin
+  const teacherX  = margin + stageW
+  const learnersX = teacherX + teacherW
+  const assessX   = learnersX + learnersW
 
-  // Stage renderer
-  function drawStage(stageName, teacherText, learnersText, assessText) {
-    const x1 = margin
-    const x2 = margin + col1W
-    const x3 = margin + col1W + col2W
-    const x4 = margin + col1W + col2W + col3W
-
-    const tLines = pdf.splitTextToSize(String(teacherText  || ""), col2W - 3)
-    const lLines = pdf.splitTextToSize(String(learnersText || ""), col3W - 3)
-    const aLines = pdf.splitTextToSize(String(assessText   || ""), col4W - 3)
-    const maxLines = Math.max(tLines.length, lLines.length, aLines.length, 3)
-    const rowH = maxLines * 4 + 6
-
-    checkPage(rowH + 4)
-
-    // Stage label background
-    drawRect(x1, y, col1W, rowH, LIGHT)
-    setFont(7, "bold", DARK_BLUE)
-    // Centre stage name vertically
-    pdf.text(stageName, x1 + 2, y + rowH/2 + 2)
-
-    // Column borders
-    pdf.setDrawColor(...MID_BLUE)
-    pdf.setLineWidth(0.2)
-    pdf.rect(x1, y, contentWidth, rowH)
-    pdf.line(x2, y, x2, y + rowH)
-    pdf.line(x3, y, x3, y + rowH)
-    pdf.line(x4, y, x4, y + rowH)
-
-    // Text
-    setFont(7.5, "normal", BLACK)
-    pdf.text(tLines, x2 + 2, y + 4)
-    pdf.text(lLines, x3 + 2, y + 4)
-    pdf.text(aLines, x4 + 2, y + 4)
-
-    y += rowH
+  function drawColumnHeaders() {
+    drawRect(margin, y, contentWidth, 9, MID_BLUE)
+    setFont(7, "bold", WHITE)
+    pdf.text("STAGES",               stageX + 2,                    y + 6)
+    pdf.text("TEACHER'S ACTIVITIES", teacherX  + teacherW  / 2,     y + 6, { align: "center" })
+    pdf.text("LEARNERS' ACTIVITIES", learnersX + learnersW / 2,     y + 6, { align: "center" })
+    pdf.text("ASSESSMENT CRITERIA",  assessX   + assessW   / 2,     y + 6, { align: "center" })
+    y += 11
   }
 
-  drawStage("INTRODUCTION",       planFields.intro_teacher,       planFields.intro_learners,       planFields.intro_assessment)
-  drawStage("LESSON\nDEVELOPMENT",planFields.development_teacher, planFields.development_learners, planFields.development_assessment)
-  drawStage("EXERCISE /\nASSESSMENT", planFields.exercise_teacher, planFields.exercise_learners,  planFields.exercise_assessment)
-  drawStage("HOME WORK",          planFields.homework_teacher,    planFields.homework_learners,    planFields.homework_assessment)
-  drawStage("CONCLUSION",         planFields.conclusion_teacher,  planFields.conclusion_learners,  planFields.conclusion_assessment)
+  drawColumnHeaders()
+
+  function drawStage(stageName, teacherText, learnersText, assessText) {
+    const tLines = wrap(teacherText,  teacherW  - 4)
+    const lLines = wrap(learnersText, learnersW - 4)
+    const aLines = wrap(assessText,   assessW   - 4)
+
+    const lineH  = 4.2
+    const padTop = 4
+    const padBot = 3
+    const totalLines = Math.max(tLines.length, lLines.length, aLines.length)
+
+    let offset = 0
+    let firstChunk = true
+
+    while (offset < totalLines) {
+      const spaceLeft = pageHeight - margin - y - padTop - padBot
+      const linesPerPage = Math.max(1, Math.floor(spaceLeft / lineH))
+      const remaining = totalLines - offset
+      const chunkSize = Math.min(linesPerPage, remaining)
+
+      if (chunkSize <= 0 || spaceLeft < lineH + padTop + padBot) {
+        pdf.addPage()
+        y = margin
+        drawColumnHeaders()
+        continue
+      }
+
+      const tChunk = tLines.slice(offset, offset + chunkSize)
+      const lChunk = lLines.slice(offset, offset + chunkSize)
+      const aChunk = aLines.slice(offset, offset + chunkSize)
+      const rowH   = chunkSize * lineH + padTop + padBot
+
+      // Stage label
+      drawRect(stageX, y, stageW, rowH, LIGHT)
+      setFont(6.5, "bold", DARK_BLUE)
+      const stageLabel = firstChunk ? cleanText(stageName) : cleanText(stageName) + " (cont.)"
+      const stageLines = pdf.splitTextToSize(stageLabel, stageW - 4)
+      stageLines.forEach((sl, i) => {
+        pdf.text(sl, stageX + 2, y + padTop + i * 4)
+      })
+
+      // Borders
+      pdf.setDrawColor(...MID_BLUE)
+      pdf.setLineWidth(0.2)
+      pdf.rect(stageX, y, contentWidth, rowH)
+      pdf.line(teacherX,  y, teacherX,  y + rowH)
+      pdf.line(learnersX, y, learnersX, y + rowH)
+      pdf.line(assessX,   y, assessX,   y + rowH)
+
+      // Text
+      setFont(7.5, "normal", BLACK)
+      tChunk.forEach((line, i) => pdf.text(line, teacherX  + 2, y + padTop + i * lineH))
+      lChunk.forEach((line, i) => pdf.text(line, learnersX + 2, y + padTop + i * lineH))
+      aChunk.forEach((line, i) => pdf.text(line, assessX   + 2, y + padTop + i * lineH))
+
+      y += rowH
+      offset += chunkSize
+      firstChunk = false
+    }
+  }
+
+  drawStage("INTRODUCTION",        planFields.intro_teacher,       planFields.intro_learners,       planFields.intro_assessment)
+  drawStage("LESSON DEVELOPMENT",  planFields.development_teacher, planFields.development_learners, planFields.development_assessment)
+  drawStage("EXERCISE/ASSESSMENT", planFields.exercise_teacher,    planFields.exercise_learners,    planFields.exercise_assessment)
+  drawStage("HOME WORK",           planFields.homework_teacher,    planFields.homework_learners,    planFields.homework_assessment)
+  drawStage("CONCLUSION",          planFields.conclusion_teacher,  planFields.conclusion_learners,  planFields.conclusion_assessment)
 
   y += 6
-
-  // Lesson Evaluation
-  checkPage(40)
+  checkPage(20)
   setFont(8, "bold", DARK_BLUE)
   pdf.text("LESSON EVALUATION:", margin, y)
   y += 5
-  setFont(7.5, "normal", BLACK)
-  const evalLines = pdf.splitTextToSize(String(planFields.lesson_evaluation || ""), contentWidth)
-  pdf.text(evalLines, margin, y)
-  y += evalLines.length * 4.5 + 4
 
-  // Dotted lines for teacher notes
+  if (planFields.lesson_evaluation && planFields.lesson_evaluation.trim() !== "") {
+    setFont(7.5, "normal", BLACK)
+    const evalLines = wrap(planFields.lesson_evaluation, contentWidth - 4)
+    evalLines.forEach(line => {
+      checkPage(6)
+      pdf.text(line, margin + 2, y)
+      y += 4.5
+    })
+  }
+  y += 4
+
   pdf.setDrawColor(180, 180, 180)
   pdf.setLineWidth(0.2)
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     checkPage(8)
     pdf.setLineDashPattern([1, 2], 0)
     pdf.line(margin, y, pageWidth - margin, y)
@@ -292,8 +294,7 @@ export async function exportLessonPlanPDF(topic, teacherFields, planFields) {
   }
   pdf.setLineDashPattern([], 0)
 
-  // Save the file
-  const fileName = `LessonPlan_${topic.topic_name}_${teacherFields.class_}_${teacherFields.date_}.pdf`
-    .replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_.-]/g, "")
+  const fileName = `LessonPlan_${cleanText(topic.topic_name)}_${cleanText(teacherFields.class_)}_${cleanText(teacherFields.date_)}`
+    .replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_.-]/g, "") + ".pdf"
   pdf.save(fileName)
 }

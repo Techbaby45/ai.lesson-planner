@@ -2,6 +2,14 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+const getPasswordStrength = (password) => {
+  if (password.length === 0) return null
+  if (password.length < 8) return { label: "Too short", color: "text-red-500", bar: "w-1/4 bg-red-500" }
+  if (password.length < 10 && !/[0-9]/.test(password)) return { label: "Weak", color: "text-orange-500", bar: "w-1/3 bg-orange-500" }
+  if (password.length >= 10 && /[0-9]/.test(password) && /[A-Z]/.test(password)) return { label: "Strong", color: "text-green-600", bar: "w-full bg-green-500" }
+  return { label: "Medium", color: "text-yellow-600", bar: "w-2/3 bg-yellow-500" }
+}
+
 export default function Login() {
   const router = useRouter()
   const [showAuth, setShowAuth] = useState(false)
@@ -14,6 +22,8 @@ export default function Login() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const passwordStrength = getPasswordStrength(form.password)
+
   const handleSubmit = async () => {
     if (!form.name || !form.password) {
       setError("Please fill in all required fields")
@@ -21,6 +31,10 @@ export default function Login() {
     }
     if (isRegister && !form.department) {
       setError("Please enter your department")
+      return
+    }
+    if (isRegister && form.password.length < 8) {
+      setError("Password must be at least 8 characters")
       return
     }
     setError("")
@@ -39,7 +53,14 @@ export default function Login() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || "Something went wrong")
+      if (!res.ok) {
+        if (isRegister && data.detail && data.detail.includes("already exists")) {
+          setError("This name is already registered. Please login instead.")
+          setIsRegister(false)
+          return
+        }
+        throw new Error(data.detail || "Something went wrong")
+      }
 
       localStorage.setItem("token", data.token)
       localStorage.setItem("user", JSON.stringify(data.user))
@@ -51,16 +72,13 @@ export default function Login() {
     }
   }
 
-  // ── LANDING PAGE ──────────────────────────────────────────────────────────
+  // LANDING PAGE
   if (!showAuth) {
     return (
       <main className="min-h-screen bg-blue-900">
-
-        {/* Hero Section */}
         <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
           <div className="max-w-2xl">
 
-            {/* Logo / Title */}
             <div className="mb-8">
               <h1 className="text-4xl font-bold text-white tracking-widest uppercase mb-3">
                 LESSON PLANNER
@@ -68,21 +86,19 @@ export default function Login() {
               <div className="h-1 w-24 bg-blue-400 mx-auto rounded"></div>
             </div>
 
-            {/* Tagline */}
             <p className="text-xl text-blue-100 mb-4 leading-relaxed">
-              AI-Powered Lesson Planning for Zambian Secondary School Mathematics Teachers
+              AI-Powered Lesson Planning for Zambian Secondary School Teachers
             </p>
             <p className="text-blue-200 text-sm mb-12 leading-relaxed">
-              Generate complete, official lesson plans aligned to the ECZ Mathematics I Syllabus
+              Generate complete, official lesson plans aligned to the CDC Zambia curriculum
               in seconds. Save time. Teach better.
             </p>
 
-            {/* Feature cards */}
             <div className="grid grid-cols-3 gap-4 mb-12">
               <div className="bg-blue-800 rounded-xl p-4">
                 <p className="text-2xl mb-2">📚</p>
-                <p className="text-white font-semibold text-sm mb-1">ECZ Aligned</p>
-                <p className="text-blue-300 text-xs">Built on the official Mathematics I Syllabus</p>
+                <p className="text-white font-semibold text-sm mb-1">CDC Aligned</p>
+                <p className="text-blue-300 text-xs">Built on the official Zambia CDC curriculum</p>
               </div>
               <div className="bg-blue-800 rounded-xl p-4">
                 <p className="text-2xl mb-2">⚡</p>
@@ -96,7 +112,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Buttons */}
             <div className="flex gap-4 justify-center">
               <button
                 onClick={() => { setShowAuth(true); setIsRegister(false) }}
@@ -112,17 +127,13 @@ export default function Login() {
               </button>
             </div>
 
-            <p className="text-blue-400 text-xs mt-8">
-              Copperbelt University — Final Year Project 2025/2026
-            </p>
           </div>
         </div>
-
       </main>
     )
   }
 
-  // ── LOGIN / REGISTER FORM ─────────────────────────────────────────────────
+  // LOGIN / REGISTER FORM
   return (
     <main className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
@@ -138,7 +149,7 @@ export default function Login() {
             LESSON PLANNER
           </h1>
           <p className="text-gray-500 text-sm mt-2">
-            Zambian Secondary School Mathematics
+            Zambian Secondary School
           </p>
         </div>
 
@@ -199,9 +210,24 @@ export default function Login() {
               type="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="Enter your password"
+              placeholder="Minimum 8 characters"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {isRegister && passwordStrength && (
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full transition-all ${passwordStrength.bar}`}></div>
+                </div>
+                <p className={`text-xs mt-1 ${passwordStrength.color}`}>
+                  Password strength: {passwordStrength.label}
+                </p>
+              </div>
+            )}
+            {isRegister && form.password.length > 0 && form.password.length < 8 && (
+              <p className="text-xs text-red-500 mt-1">
+                Password must be at least 8 characters
+              </p>
+            )}
           </div>
 
           {error && (
@@ -215,11 +241,32 @@ export default function Login() {
           >
             {loading ? "Please wait..." : isRegister ? "Create Account" : "Login"}
           </button>
+
+          {!isRegister && (
+            <p className="text-center text-xs text-gray-500">
+              Don't have an account?{" "}
+              <button
+                onClick={() => { setIsRegister(true); setError("") }}
+                className="text-blue-600 font-semibold hover:underline"
+              >
+                Register here
+              </button>
+            </p>
+          )}
+
+          {isRegister && (
+            <p className="text-center text-xs text-gray-500">
+              Already registered?{" "}
+              <button
+                onClick={() => { setIsRegister(false); setError("") }}
+                className="text-blue-600 font-semibold hover:underline"
+              >
+                Login instead
+              </button>
+            </p>
+          )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          AI-Powered Lesson Planner — CBU Final Year Project 2025/2026
-        </p>
       </div>
     </main>
   )
