@@ -1,12 +1,10 @@
 "use client"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import LessonPlanDisplay from "../components/LessonPlanDisplay"
 import { loadPlansOffline, loadSinglePlanOffline } from "../utils/offlineStore"
 
 export default function SavedPlans() {
-  const router = useRouter()
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -17,12 +15,11 @@ export default function SavedPlans() {
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
-      router.push("/login")
+      window.location.href = "/login"
       return
     }
 
     const loadPlans = async () => {
-      // Try online first
       if (navigator.onLine) {
         try {
           const res = await fetch("http://127.0.0.1:8000/saved-plans", {
@@ -38,7 +35,6 @@ export default function SavedPlans() {
         }
       }
 
-      // Fall back to offline IndexedDB
       try {
         const offlinePlans = await loadPlansOffline()
         setPlans(offlinePlans)
@@ -56,14 +52,12 @@ export default function SavedPlans() {
   const openPlan = async (plan) => {
     setLoadingPlan(true)
     try {
-      // If offline or plan has full data already (from IndexedDB)
       if (isOffline || plan.topic) {
         setSelectedPlan(plan)
         setLoadingPlan(false)
         return
       }
 
-      // Online — fetch full plan from backend
       const token = localStorage.getItem("token")
       const res = await fetch(`http://127.0.0.1:8000/saved-plans/${plan.plan_id}`, {
         headers: { "Authorization": `Bearer ${token}` }
@@ -72,7 +66,6 @@ export default function SavedPlans() {
       if (!res.ok) throw new Error(data.detail || "Could not load plan")
       setSelectedPlan(data)
     } catch (err) {
-      // Try IndexedDB as fallback
       try {
         const offlinePlan = await loadSinglePlanOffline(plan.plan_id)
         if (offlinePlan) {
@@ -86,6 +79,18 @@ export default function SavedPlans() {
     } finally {
       setLoadingPlan(false)
     }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    sessionStorage.removeItem("currentPlan")
+    window.location.href = "/login"
+  }
+
+  const goToMain = () => {
+    sessionStorage.removeItem("currentPlan")
+    window.location.href = "/main"
   }
 
   if (selectedPlan) {
@@ -117,20 +122,29 @@ export default function SavedPlans() {
       <div className="bg-blue-900 text-white py-4 px-6 shadow-md">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold tracking-widest uppercase">LESSON PLANNER</h1>
-          <Link href="/"
-            className="text-sm border border-blue-300 text-blue-100 px-4 py-1 rounded-lg hover:bg-blue-800">
-            ← Back to Main
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={goToMain}
+              className="text-sm border border-blue-300 text-blue-100 px-4 py-1 rounded-lg hover:bg-blue-800">
+              ← Back to Main
+            </button>
+            <button
+              onClick={handleLogout}
+              className="text-sm border border-red-300 text-red-200 px-4 py-1 rounded-lg hover:bg-red-800">
+              Logout
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-blue-900">My Saved Lesson Plans</h2>
-          <Link href="/"
+          <button
+            onClick={goToMain}
             className="text-sm bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800">
             + New Plan
-          </Link>
+          </button>
         </div>
 
         {isOffline && (
@@ -161,10 +175,11 @@ export default function SavedPlans() {
                 ? "No plans saved on this device yet. Generate a plan while online first."
                 : "Generate your first lesson plan to see it here"}
             </p>
-            <Link href="/"
+            <button
+              onClick={goToMain}
               className="inline-block mt-4 bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 text-sm">
               Generate a Plan
-            </Link>
+            </button>
           </div>
         )}
 

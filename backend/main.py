@@ -30,25 +30,18 @@ def get_db():
     return conn
 
 def clean_json_text(text):
-    # Remove markdown code blocks
     if "```" in text:
         text = text.split("```")[1]
         if text.startswith("json"):
             text = text[4:]
-
-    # Extract between first { and last }
     start = text.find("{")
     end = text.rfind("}") + 1
     if start == -1 or end == 0:
         raise Exception("No JSON found in AI response")
     text = text[start:end]
-
-    # Parse character by character to fix control characters
-    # only outside of string values
     result = []
     in_string = False
     escape_next = False
-
     for char in text:
         if escape_next:
             result.append(char)
@@ -63,7 +56,6 @@ def clean_json_text(text):
             result.append(char)
             continue
         if in_string:
-            # Inside a string — replace raw control characters safely
             if char == '\n':
                 result.append('\\n')
             elif char == '\r':
@@ -76,7 +68,6 @@ def clean_json_text(text):
                 result.append(char)
         else:
             result.append(char)
-
     return ''.join(result)
 
 class LessonRequest(BaseModel):
@@ -209,14 +200,42 @@ def generate_plan(request: LessonRequest, current_user: dict = Depends(get_curre
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
+            model="openai/gpt-oss-120b",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an experienced Zambian secondary school Mathematics teacher. Always respond with valid JSON only. No text before or after the JSON object. Never refer to the teacher by name — always say 'The teacher' instead."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
             temperature=0.7,
+            reasoning_effort="low",
         )
         raw_text = response.choices[0].message.content.strip()
-        raw_text = clean_json_text(raw_text)
-        lesson_plan_data = json.loads(raw_text)
 
+        try:
+            raw_text = clean_json_text(raw_text)
+            lesson_plan_data = json.loads(raw_text)
+            lesson_plan_data["lesson_evaluation"] = ""
+
+            teacher_name = request.name_of_teacher
+            for field in lesson_plan_data:
+                if isinstance(lesson_plan_data[field], str):
+                    lesson_plan_data[field] = lesson_plan_data[field].replace(teacher_name, "The teacher")
+                    lesson_plan_data[field] = lesson_plan_data[field].replace(teacher_name.title(), "The teacher")
+                    lesson_plan_data[field] = lesson_plan_data[field].replace(teacher_name.upper(), "The teacher")
+
+        except Exception as parse_err:
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI generation failed: {str(parse_err)}. Raw: {raw_text[:300]}"
+            )
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -361,6 +380,6 @@ def get_saved_plan(plan_id: int, current_user: dict = Depends(get_current_user))
             "conclusion_teacher": row["conclusion_teacher"],
             "conclusion_learners": row["conclusion_learners"],
             "conclusion_assessment": row["conclusion_assessment"],
-            "lesson_evaluation": row["lesson_evaluation"] or "",
+            "lesson_evaluation": "",
         }
     }

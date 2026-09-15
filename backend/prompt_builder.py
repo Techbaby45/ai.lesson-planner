@@ -126,3 +126,10 @@ Generate ONLY a JSON response with this exact structure (no other text):
 }}
 """
     return prompt
+
+
+
+
+
+
+

@@ -240,14 +240,9 @@ export default function LessonPlanDisplay({ data, onBack }) {
           placeholder="Teacher fills this in after the lesson..."
           className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
         />
-        <div className="mt-3 space-y-3">
-          <div className="h-6 border-b border-dotted border-gray-300"></div>
-          <div className="h-6 border-b border-dotted border-gray-300"></div>
-          <div className="h-6 border-b border-dotted border-gray-300"></div>
-          <div className="h-6 border-b border-dotted border-gray-300"></div>
-        </div>
+      </div>
       </div>
 
-    </div>
+   
   )
 }

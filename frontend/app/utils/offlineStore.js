@@ -58,14 +58,17 @@ export async function loadTopicsOffline() {
 
 export async function savePlanOffline(planData) {
   try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}")
+    const userId = user.user_id || null
+
     const db = await openDB()
     const tx = db.transaction(PLANS_STORE, "readwrite")
     const store = tx.objectStore(PLANS_STORE)
 
     const record = {
       ...planData,
+      user_id: userId,
       saved_at: new Date().toISOString(),
-      // summary fields for the list view
       topic_name: planData.topic?.topic_name || "",
       sub_topic: planData.topic?.sub_topic || "",
       name_of_teacher: planData.teacher_input?.name_of_teacher || "",
@@ -75,7 +78,7 @@ export async function savePlanOffline(planData) {
 
     const request = store.add(record)
     return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result) // returns the new plan_id
+      request.onsuccess = () => resolve(request.result)
       request.onerror   = () => reject(request.error)
     })
   } catch (e) {
@@ -86,15 +89,21 @@ export async function savePlanOffline(planData) {
 
 export async function loadPlansOffline() {
   try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}")
+    const userId = user.user_id || null
+
     const db = await openDB()
     const tx = db.transaction(PLANS_STORE, "readonly")
     const store = tx.objectStore(PLANS_STORE)
     const request = store.getAll()
+
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
-        // Return newest first
-        const plans = request.result.reverse()
-        resolve(plans)
+        const allPlans = request.result
+        const userPlans = userId
+          ? allPlans.filter(p => String(p.user_id) === String(userId))
+          : []
+        resolve(userPlans.reverse())
       }
       request.onerror = () => reject(request.error)
     })

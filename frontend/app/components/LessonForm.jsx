@@ -27,11 +27,12 @@ const calculateEndTime = (startTime, durationMins) => {
 }
 
 export default function LessonForm({ onPlanGenerated }) {
+  const user = JSON.parse(localStorage.getItem("user") || "{}")
   const [selectedTopic, setSelectedTopic] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [form, setForm] = useState({
-    name_of_teacher: "",
+    name_of_teacher: user.name || "",
     class_: "",
     time_: "",
     date_: "",
@@ -50,10 +51,6 @@ export default function LessonForm({ onPlanGenerated }) {
   const handleSubmit = async () => {
     if (!selectedTopic) {
       setError("Please select a topic first")
-      return
-    }
-    if (!form.name_of_teacher || form.name_of_teacher.trim() === "") {
-      setError("Name of Teacher is required")
       return
     }
     if (!form.class_) {
@@ -87,7 +84,7 @@ export default function LessonForm({ onPlanGenerated }) {
       const timeSlot = form.time_ && endTime ? `${form.time_} - ${endTime}` : form.time_
 
       const token = localStorage.getItem("token")
-      const user = JSON.parse(localStorage.getItem("user") || "{}")
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
 
       const response = await fetch("http://127.0.0.1:8000/generate-plan", {
         method: "POST",
@@ -97,7 +94,7 @@ export default function LessonForm({ onPlanGenerated }) {
         },
         body: JSON.stringify({
           topic_id: selectedTopic.topic_id,
-          user_id: user.user_id,
+          user_id: currentUser.user_id,
           ...form,
           time_: timeSlot,
           no_of_learners: parseInt(form.no_of_learners)
@@ -125,7 +122,6 @@ export default function LessonForm({ onPlanGenerated }) {
       <div>
         <h2 className="text-lg font-bold text-blue-900 mb-4">Step 2: Describe Your Classroom</h2>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Name of Teacher" name="name_of_teacher" value={form.name_of_teacher} onChange={handleChange} placeholder="e.g. Mrs Banda" />
           <Field label="Class" name="class_" value={form.class_} onChange={handleChange} placeholder="e.g. 1A" />
           <div>
             <label className="block text-sm font-semibold text-blue-900 mb-1">Time</label>
