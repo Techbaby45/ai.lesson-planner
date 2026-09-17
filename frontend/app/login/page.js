@@ -4,8 +4,20 @@ import { useState, useEffect } from "react"
 const getPasswordStrength = (password) => {
   if (password.length === 0) return null
   if (password.length < 8) return { label: "Too short", color: "text-red-500", bar: "w-1/4 bg-red-500" }
-  if (password.length >= 10 && /[0-9]/.test(password) && /[A-Z]/.test(password)) return { label: "Strong", color: "text-green-600", bar: "w-full bg-green-500" }
-  return { label: "Medium", color: "text-yellow-600", bar: "w-2/3 bg-yellow-500" }
+
+  let score = 0
+  if (password.length >= 8) score++
+  if (password.length >= 12) score++
+  if (/[A-Z]/.test(password)) score++
+  if (/[a-z]/.test(password)) score++
+  if (/[0-9]/.test(password)) score++
+  if (/[^A-Za-z0-9]/.test(password)) score++
+
+  if (score <= 2) return { label: "Weak", color: "text-red-500", bar: "w-1/3 bg-red-500" }
+  if (score <= 3) return { label: "Fair", color: "text-orange-500", bar: "w-1/2 bg-orange-500" }
+  if (score <= 4) return { label: "Medium", color: "text-yellow-600", bar: "w-2/3 bg-yellow-500" }
+  if (score === 5) return { label: "Strong", color: "text-blue-600", bar: "w-5/6 bg-blue-500" }
+  return { label: "Very Strong", color: "text-green-600", bar: "w-full bg-green-500" }
 }
 
 export default function Login() {
@@ -15,8 +27,21 @@ export default function Login() {
   const [error, setError] = useState("")
   const [form, setForm] = useState({ name: "", department: "", password: "" })
 
+  useEffect(() => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    localStorage.removeItem("justLoggedIn")
+    sessionStorage.removeItem("currentPlan")
+  }, [])
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const clearAndSwitch = (toRegister) => {
+    setIsRegister(toRegister)
+    setError("")
+    setForm({ name: "", department: "", password: "" })
   }
 
   const passwordStrength = getPasswordStrength(form.password)
@@ -53,7 +78,7 @@ export default function Login() {
       if (!res.ok) {
         if (isRegister && data.detail && data.detail.includes("already exists")) {
           setError("This name is already registered. Please login instead.")
-          setIsRegister(false)
+          clearAndSwitch(false)
           return
         }
         throw new Error(data.detail || "Something went wrong")
@@ -61,6 +86,7 @@ export default function Login() {
 
       localStorage.setItem("token", data.token)
       localStorage.setItem("user", JSON.stringify(data.user))
+      sessionStorage.removeItem("currentPlan")
       window.location.href = "/main"
     } catch (err) {
       setError(err.message)
@@ -106,13 +132,13 @@ export default function Login() {
             </div>
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => { setShowAuth(true); setIsRegister(false) }}
+                onClick={() => { setShowAuth(true); clearAndSwitch(false) }}
                 className="bg-white text-blue-900 font-bold px-8 py-3 rounded-lg hover:bg-blue-50 transition-colors text-sm"
               >
                 Login
               </button>
               <button
-                onClick={() => { setShowAuth(true); setIsRegister(true) }}
+                onClick={() => { setShowAuth(true); clearAndSwitch(true) }}
                 className="bg-blue-500 text-white font-bold px-8 py-3 rounded-lg hover:bg-blue-400 transition-colors text-sm"
               >
                 Get Started — Register
@@ -144,7 +170,7 @@ export default function Login() {
 
         <div className="flex mb-6 border border-gray-200 rounded-lg overflow-hidden">
           <button
-            onClick={() => { setIsRegister(false); setError("") }}
+            onClick={() => clearAndSwitch(false)}
             className={`flex-1 py-2 text-sm font-semibold transition-colors ${
               !isRegister ? "bg-blue-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
             }`}
@@ -152,7 +178,7 @@ export default function Login() {
             Login
           </button>
           <button
-            onClick={() => { setIsRegister(true); setError("") }}
+            onClick={() => clearAndSwitch(true)}
             className={`flex-1 py-2 text-sm font-semibold transition-colors ${
               isRegister ? "bg-blue-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
             }`}
@@ -169,6 +195,7 @@ export default function Login() {
               value={form.name}
               onChange={handleChange}
               placeholder="e.g. Mrs Banda"
+              autoComplete="off"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -181,6 +208,7 @@ export default function Login() {
                 value={form.department}
                 onChange={handleChange}
                 placeholder="e.g. Mathematics Department"
+                autoComplete="off"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -194,6 +222,7 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
               placeholder="Minimum 8 characters"
+              autoComplete="off"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {isRegister && passwordStrength && (
@@ -227,7 +256,7 @@ export default function Login() {
             <p className="text-center text-xs text-gray-500">
               Don't have an account?{" "}
               <button
-                onClick={() => { setIsRegister(true); setError("") }}
+                onClick={() => clearAndSwitch(true)}
                 className="text-blue-600 font-semibold hover:underline"
               >
                 Register here
@@ -239,7 +268,7 @@ export default function Login() {
             <p className="text-center text-xs text-gray-500">
               Already registered?{" "}
               <button
-                onClick={() => { setIsRegister(false); setError("") }}
+                onClick={() => clearAndSwitch(false)}
                 className="text-blue-600 font-semibold hover:underline"
               >
                 Login instead

@@ -99,19 +99,6 @@ export default function TopicSelector({ onTopicSelect }) {
         </div>
       )}
 
-      {selectedTopic && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-xs font-bold text-blue-800 mb-2">
-            Auto-populated from ECZ Syllabus:
-          </p>
-          <p className="text-xs text-blue-700">
-            <span className="font-semibold">Lesson Goal:</span> {selectedTopic.lesson_goal}
-          </p>
-          <p className="text-xs text-blue-700 mt-1">
-            <span className="font-semibold">Prior Knowledge:</span> {selectedTopic.prior_knowledge}
-          </p>
-        </div>
-      )}
     </div>
   )
 }

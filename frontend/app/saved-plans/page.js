@@ -6,11 +6,13 @@ import { loadPlansOffline, loadSinglePlanOffline } from "../utils/offlineStore"
 
 export default function SavedPlans() {
   const [plans, setPlans] = useState([])
+  const [filteredPlans, setFilteredPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [loadingPlan, setLoadingPlan] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
+  const [search, setSearch] = useState("")
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -27,6 +29,7 @@ export default function SavedPlans() {
           })
           const data = await res.json()
           setPlans(data.saved_plans || [])
+          setFilteredPlans(data.saved_plans || [])
           setIsOffline(false)
           setLoading(false)
           return
@@ -38,6 +41,7 @@ export default function SavedPlans() {
       try {
         const offlinePlans = await loadPlansOffline()
         setPlans(offlinePlans)
+        setFilteredPlans(offlinePlans)
         setIsOffline(true)
         setLoading(false)
       } catch (err) {
@@ -48,6 +52,24 @@ export default function SavedPlans() {
 
     loadPlans()
   }, [])
+
+  const handleSearch = (e) => {
+    const value = e.target.value
+    setSearch(value)
+    if (!value.trim()) {
+      setFilteredPlans(plans)
+      return
+    }
+    const lower = value.toLowerCase()
+    const filtered = plans.filter(plan =>
+      plan.topic_name?.toLowerCase().includes(lower) ||
+      plan.sub_topic?.toLowerCase().includes(lower) ||
+      plan.class_?.toLowerCase().includes(lower) ||
+      plan.date_?.includes(lower) ||
+      plan.name_of_teacher?.toLowerCase().includes(lower)
+    )
+    setFilteredPlans(filtered)
+  }
 
   const openPlan = async (plan) => {
     setLoadingPlan(true)
@@ -147,6 +169,22 @@ export default function SavedPlans() {
           </button>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-4">
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearch}
+            placeholder="Search by topic, class, date or teacher name..."
+            className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {search && (
+            <p className="text-xs text-gray-500 mt-1">
+              {filteredPlans.length} result{filteredPlans.length !== 1 ? "s" : ""} found
+            </p>
+          )}
+        </div>
+
         {isOffline && (
           <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-4 text-yellow-800 text-sm">
             📴 You are offline. Showing plans saved on this device.
@@ -167,25 +205,31 @@ export default function SavedPlans() {
           </div>
         )}
 
-        {!loading && !error && plans.length === 0 && (
+        {!loading && !error && filteredPlans.length === 0 && (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <p className="text-gray-500 text-lg mb-2">No saved plans yet</p>
+            <p className="text-gray-500 text-lg mb-2">
+              {search ? "No plans match your search" : "No saved plans yet"}
+            </p>
             <p className="text-gray-400 text-sm">
-              {isOffline
+              {search
+                ? "Try a different search term"
+                : isOffline
                 ? "No plans saved on this device yet. Generate a plan while online first."
                 : "Generate your first lesson plan to see it here"}
             </p>
-            <button
-              onClick={goToMain}
-              className="inline-block mt-4 bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 text-sm">
-              Generate a Plan
-            </button>
+            {!search && (
+              <button
+                onClick={goToMain}
+                className="inline-block mt-4 bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 text-sm">
+                Generate a Plan
+              </button>
+            )}
           </div>
         )}
 
-        {!loading && plans.length > 0 && (
+        {!loading && filteredPlans.length > 0 && (
           <div className="space-y-3">
-            {plans.map((plan) => (
+            {filteredPlans.map((plan) => (
               <div key={plan.plan_id || plan.saved_at}
                 className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:border-blue-200 transition-colors">
                 <div className="flex justify-between items-start">
@@ -194,7 +238,7 @@ export default function SavedPlans() {
                     <p className="text-gray-600 text-xs mt-1">{plan.sub_topic}</p>
                     <div className="flex gap-4 mt-2">
                       <span className="text-xs text-gray-500">👤 {plan.name_of_teacher}</span>
-                      <span className="text-xs text-gray-500">🏫 Class {plan.class_}</span>
+                      <span className="text-xs text-gray-500">🏫 {plan.class_}</span>
                       <span className="text-xs text-gray-500">📅 {plan.date_}</span>
                     </div>
                   </div>

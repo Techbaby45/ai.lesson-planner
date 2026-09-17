@@ -65,21 +65,37 @@ export async function savePlanOffline(planData) {
     const tx = db.transaction(PLANS_STORE, "readwrite")
     const store = tx.objectStore(PLANS_STORE)
 
-    const record = {
-      ...planData,
-      user_id: userId,
-      saved_at: new Date().toISOString(),
-      topic_name: planData.topic?.topic_name || "",
-      sub_topic: planData.topic?.sub_topic || "",
-      name_of_teacher: planData.teacher_input?.name_of_teacher || "",
-      class_: planData.teacher_input?.class_ || "",
-      date_: planData.teacher_input?.date_ || "",
-    }
-
-    const request = store.add(record)
+    const allRequest = store.getAll()
     return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result)
-      request.onerror   = () => reject(request.error)
+      allRequest.onsuccess = () => {
+        const existing = allRequest.result
+
+        // Check if plan already exists by input_id to avoid duplicates
+        const alreadySaved = existing.some(
+          p => p.input_id === planData.input_id && String(p.user_id) === String(userId)
+        )
+
+        if (alreadySaved) {
+          resolve(null)
+          return
+        }
+
+        const record = {
+          ...planData,
+          user_id: userId,
+          saved_at: new Date().toISOString(),
+          topic_name: planData.topic?.topic_name || "",
+          sub_topic: planData.topic?.sub_topic || "",
+          name_of_teacher: planData.teacher_input?.name_of_teacher || "",
+          class_: planData.teacher_input?.class_ || "",
+          date_: planData.teacher_input?.date_ || "",
+        }
+
+        const addRequest = store.add(record)
+        addRequest.onsuccess = () => resolve(addRequest.result)
+        addRequest.onerror = () => reject(addRequest.error)
+      }
+      allRequest.onerror = () => reject(allRequest.error)
     })
   } catch (e) {
     console.error("Failed to save plan offline:", e)
