@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import TopicSelector from "./TopicSelector"
 
 const Field = ({ label, name, value, onChange, type = "text", placeholder = "" }) => (
@@ -25,15 +25,6 @@ const calculateEndTime = (startTime, durationMins) => {
   const endHours = Math.floor(totalMins / 60) % 24
   const endMins = totalMins % 60
   return `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`
-}
-
-const getTodayString = () => {
-  const today = new Date()
-  return today.toISOString().split("T")[0]
-}
-
-const getMinDateString = () => {
-  return "2026-01-01"
 }
 
 export default function LessonForm({ onPlanGenerated }) {
@@ -62,7 +53,7 @@ export default function LessonForm({ onPlanGenerated }) {
     }
   }
 
-      const checkDuplicate = async () => {
+  const checkDuplicate = async () => {
     if (!form.date_ || !form.class_ || !selectedTopic) return false
     try {
       const token = localStorage.getItem("token")
@@ -86,6 +77,7 @@ export default function LessonForm({ onPlanGenerated }) {
       return false
     }
   }
+
   const handleSubmit = async (force = false) => {
     if (!selectedTopic) {
       setError("Please select a topic first")
@@ -103,21 +95,10 @@ export default function LessonForm({ onPlanGenerated }) {
       setError("Date is required")
       return
     }
-
-    // Check date is not in the past
-    const today = getTodayString()
-    if (form.date_ < today) {
-      setError("You cannot generate a lesson plan for a past date")
+    if (!form.duration) {
+      setError("Duration is required")
       return
     }
-
-    // Check date is not before 2026
-    if (form.date_ < "2026-01-01") {
-      setError("Date must be in 2026 or later to align with the new CDC curriculum")
-      return
-    }
-
-    // Check duration
     if (parseInt(form.duration) < 70) {
       setError("Duration must be at least 70 minutes")
       return
@@ -221,17 +202,7 @@ export default function LessonForm({ onPlanGenerated }) {
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-blue-900 mb-1">Date</label>
-            <input
-              type="date"
-              name="date_"
-              value={form.date_}
-              onChange={handleChange}
-              min={getMinDateString()}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <Field label="Date" name="date_" value={form.date_} onChange={handleChange} type="date" />
 
           <div>
             <label className="block text-sm font-semibold text-blue-900 mb-1">Duration (minutes)</label>
@@ -244,18 +215,18 @@ export default function LessonForm({ onPlanGenerated }) {
               max="120"
               autoComplete="off"
               className={`w-full border rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                parseInt(form.duration) < 70 || parseInt(form.duration) > 120
+                form.duration && (parseInt(form.duration) < 70 || parseInt(form.duration) > 120)
                   ? "border-red-500 bg-red-50"
                   : "border-gray-300"
               }`}
             />
-            {parseInt(form.duration) < 70 && (
+            {form.duration && parseInt(form.duration) < 70 && (
               <p className="text-xs text-red-600 mt-1">Duration must be at least 70 minutes</p>
             )}
-            {parseInt(form.duration) > 120 && (
+            {form.duration && parseInt(form.duration) > 120 && (
               <p className="text-xs text-red-600 mt-1">Duration cannot exceed 120 minutes</p>
             )}
-            {parseInt(form.duration) >= 70 && parseInt(form.duration) <= 120 && (
+            {form.duration && parseInt(form.duration) >= 70 && parseInt(form.duration) <= 120 && (
               <p className="text-xs text-green-600 mt-1">✓ Valid duration</p>
             )}
           </div>
@@ -312,7 +283,7 @@ export default function LessonForm({ onPlanGenerated }) {
 
       <button
         onClick={() => handleSubmit(false)}
-        disabled={loading || parseInt(form.duration) < 70 || parseInt(form.duration) > 120}
+        disabled={loading || (form.duration && (parseInt(form.duration) < 70 || parseInt(form.duration) > 120))}
         className="w-full bg-blue-900 text-white font-bold py-3 rounded-lg hover:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? "Generating your lesson plan... please wait" : "GENERATE LESSON PLAN"}
