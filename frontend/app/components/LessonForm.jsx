@@ -95,6 +95,10 @@ export default function LessonForm({ onPlanGenerated }) {
       setError("Date is required")
       return
     }
+    if (form.date_ < "2026-01-01") {
+      setError("Date must be from 2026 onwards — the year the new CDC curriculum was implemented")
+      return
+    }
     if (!form.duration) {
       setError("Duration is required")
       return
@@ -108,7 +112,6 @@ export default function LessonForm({ onPlanGenerated }) {
       return
     }
 
-    // Check for duplicate
     if (!force) {
       const isDuplicate = await checkDuplicate()
       if (isDuplicate) return
@@ -202,7 +205,20 @@ export default function LessonForm({ onPlanGenerated }) {
             )}
           </div>
 
-          <Field label="Date" name="date_" value={form.date_} onChange={handleChange} type="date" />
+          <div>
+            <label className="block text-sm font-semibold text-blue-900 mb-1">Date</label>
+            <input
+              type="date"
+              name="date_"
+              value={form.date_}
+              onChange={handleChange}
+              min="2026-01-01"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {form.date_ && form.date_ < "2026-01-01" && (
+              <p className="text-xs text-red-600 mt-1">Date must be from 2026 onwards</p>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-semibold text-blue-900 mb-1">Duration (minutes)</label>
